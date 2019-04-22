@@ -7,6 +7,7 @@ theme: sandstone
 ---
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
+install.packages("here")
 library(tidyverse)
 library(here)
 source(here::here("code/lib.R"))
@@ -75,6 +76,86 @@ por_time = estimativas_raw %>%
 
 ## Qual a relação entre as estimativas e horas reais tomadas na empresa como um todo e em diferentes categorias de tarefa?
 
+Vamos ver primeiramente como são os dados das estimativas e horas reais tomadas na empresa.
 
+```{r}
+estimativas %>%
+    ggplot(aes(x = HoursEstimate, y = HoursActual)) + 
+    geom_point() +
+    labs(
+        x = "Horas estimadas",
+        y = "Hora gastas",
+        title = "Horas estimadas x Horas gastas")
+```
+
+Podemos ver que os dados são muito concentrados a esquerda e abaixo e existem alguns picos nas duas variáveis, tornando difícil fazer qualquer observação sobre a correlação. 
+
+Para melhorar a análise, vamos trabalhar com logs. Assim, a medida da correlação não será tão influenciada pelos outliers.
+
+```{r}
+estimativas %>%
+    ggplot(aes(x = HoursEstimate, y = HoursActual)) + 
+    geom_point(alpha = 0.2) +
+    scale_x_continuous(trans = 'log10') +
+    scale_y_continuous(trans = 'log10') +
+    labs(
+        x = "Horas estimadas",
+        y = "Hora gastas",
+        title = "Horas estimadas x Horas gastas (com log)")
+```
+
+No primeiro gráfico é difícil notar qualquer relação entre os dados, mas no segundo podemos ver a relação entre eles mais claramente.
+
+Agora vamos analisar, também aplicando o log na base 10 do valor original, qual a relação entre as estimativas e horas reais gastas na empresa para diferentes categorias de tarefa.
+
+```{r}
+estimativas %>%
+    ggplot(aes(x = HoursEstimate, y = HoursActual)) + 
+    geom_point(alpha = 0.2) +
+    scale_x_continuous(trans = 'log10') +
+    scale_y_continuous(trans = 'log10') +
+    facet_wrap(~Category) +
+    labs(
+        x = "Horas estimadas",
+        y = "Hora gastas",
+        title = "Horas estimadas x Horas gastas para diferentes categorias (com log)")
+```
+
+Como um resumo das visualizações acima, vejamos os valores de correlação para os dados de todas as categorias:
+```{r}
+estimativas %>%
+    summarise(
+    pearson = cor(HoursEstimate, HoursActual, method = "pearson"), 
+    spearman = cor(HoursEstimate, HoursActual, method = "spearman"), 
+    kendall = cor(HoursEstimate, HoursActual, method = "kendall")
+  )
+    
+```
+
+Se removermos os valores extremos, os valores de correlação tendem a mudar para 'pearson' que é mais influenciada pelos outliers:
+```{r}
+estimativas %>%
+    filter(HoursEstimate < 2000, HoursActual < 650) %>% 
+    summarise(
+    pearson = cor(HoursEstimate, HoursActual, method = "pearson"), 
+    spearman = cor(HoursEstimate, HoursActual, method = "spearman"), 
+    kendall = cor(HoursEstimate, HoursActual, method = "kendall")
+  )
+    
+```
+
+E para as categorias separadamente:
+
+```{r}
+estimativas %>%
+    filter(HoursEstimate < 2000, HoursActual < 650) %>% 
+    group_by(Category) %>%
+    summarise(
+    pearson = cor(HoursEstimate, HoursActual, method = "pearson"), 
+    spearman = cor(HoursEstimate, HoursActual, method = "spearman"), 
+    kendall = cor(HoursEstimate, HoursActual, method = "kendall")
+  )
+    
+```
 ## Equipes com mais desenvolvedores produzem estimativas com mais ou menos erro que equipes menores? 
 
