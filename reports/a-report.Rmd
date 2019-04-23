@@ -7,7 +7,6 @@ theme: sandstone
 ---
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-install.packages("here")
 library(tidyverse)
 library(here)
 source(here::here("code/lib.R"))
@@ -34,8 +33,7 @@ glimpse(estimativas_raw)
 
 ```{r}
 estimativas_raw %>% 
-    select(ProjectCode, TaskNumber, HoursEstimate, HoursActual) %>% 
-    skimr::skim()
+    select(ProjectCode, TaskNumber, HoursEstimate, HoursActual) 
 ```
 
 Temos 20 projetos, com 12299 estimativas_raw. Não há apenas uma estimativa por tarefa, já que há apenas 10266 valores distintos de `TaskNumber`.
@@ -76,7 +74,7 @@ por_time = estimativas_raw %>%
 
 ## Qual a relação entre as estimativas e horas reais tomadas na empresa como um todo e em diferentes categorias de tarefa?
 
-Vamos ver primeiramente como são os dados das estimativas e horas reais tomadas na empresa.
+Vamos ver primeiramente como são distribuídos os dados das estimativas e horas gastas reais.
 
 ```{r}
 estimativas %>%
@@ -88,7 +86,7 @@ estimativas %>%
         title = "Horas estimadas x Horas gastas")
 ```
 
-Podemos ver que os dados são muito concentrados a esquerda e abaixo e existem alguns picos nas duas variáveis, tornando difícil fazer qualquer observação sobre a correlação. 
+Podemos ver que os dados são muito concentrados a esquerda e abaixo e existem alguns picos para as duas variáveis, tornando difícil fazer qualquer observação sobre a correlação. 
 
 Para melhorar a análise, vamos trabalhar com logs. Assim, a medida da correlação não será tão influenciada pelos outliers.
 
@@ -158,4 +156,42 @@ estimativas %>%
     
 ```
 ## Equipes com mais desenvolvedores produzem estimativas com mais ou menos erro que equipes menores? 
+
+Vamos analisar a relação entre o número de desenvolvedores e erro nas estimativas dos projetos.
+```{r}
+por_time %>%
+    ggplot(aes(x = devs, y = erro_medio_abs)) + 
+    geom_point() +
+    labs(
+        x = "Número de devs",
+        y = "Erro médio absoluto por projeto",
+        title = "Número de devs x Erro médio nas estimativas")
+
+```
+
+Mais uma vez, os dados "crus" não nos dizem muita coisa a respeito da correlação entre as variáveis. Vamos analisar aplicando o log de base 10.
+
+```{r}
+por_time %>%
+    ggplot(aes(x = devs, y = erro_medio_abs)) + 
+    geom_point() +
+    scale_x_continuous(trans = 'log10') +
+    scale_y_continuous(trans = 'log10') +
+    labs(
+        x = "Número de devs",
+        y = "Erro médio absoluto por projeto",
+        title = "Número de devs x Erro médio nas estimativas")
+
+```
+
+A visualização acima nos leva a crer que não há uma correlação significativa entre o número de desenvolvedores e erro nas estimativas dos projetos. Vamos confirmar a intuição a partir dos valores sumarizados pelos métodos de correlação pearson, spearman e kendall.
+
+```{r}
+por_time %>%
+    summarise(
+    pearson = cor(devs, erro_medio_abs, method = "pearson"), 
+    spearman = cor(devs, erro_medio_abs, method = "spearman"), 
+    kendall = cor(devs, erro_medio_abs, method = "kendall")
+  )
+```
 
